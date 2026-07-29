@@ -47,7 +47,7 @@ import csv
 from collections import defaultdict
 
 ROW_PREFIX = re.compile(
-    r'^(?P<po>\S+)\s+(?P<reg>\d+)\s+(?P<ibm>\d+)\s+(?P<line>\d+)\s+'
+    r'^(?P<po>.+?)\s+(?P<reg>\d+)\s+(?P<ibm>\d+)\s+(?P<line>\d+)\s+'
     r'(?P<trndate>\d{1,2}/\d{1,2}/\d{2})\s+(?P<trntime>\d{1,2}:\d{2}:\d{2})\s+'
     r'(?P<user>\S+)\s+Before:\s*(?P<rest>.*)$'
 )
