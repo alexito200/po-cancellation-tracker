@@ -39,6 +39,7 @@ report going forward:
     price AND quantity in the same move, the price used is the Before
     price, not a blended one.
 """
+import os
 import re
 import subprocess
 import sys
@@ -61,7 +62,16 @@ ACCOUNT_RE = re.compile(r'Account:\s*(\S+)\s+(.*?)\s{2,}Program:')
 
 
 def extract_layout_text(pdf_path: str) -> list[str]:
-    out = subprocess.run(['pdftotext', '-layout', pdf_path, '-'],
+    # If POPPLER_PATH is set (e.g. on a locked-down machine with no PATH
+    # access), call pdftotext by its full path instead of relying on PATH.
+    # Unset -> unchanged behavior, so this is a no-op on Community Cloud.
+    poppler_dir = os.environ.get('POPPLER_PATH')
+    if poppler_dir:
+        exe_name = 'pdftotext.exe' if os.name == 'nt' else 'pdftotext'
+        exe = os.path.join(poppler_dir, exe_name)
+    else:
+        exe = 'pdftotext'
+    out = subprocess.run([exe, '-layout', pdf_path, '-'],
                           capture_output=True, text=True, check=True)
     return out.stdout.splitlines()
 
