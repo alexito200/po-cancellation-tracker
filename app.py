@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 import github_storage as ghs
-from ingest import process_uploads, load_master, worker_summary
+from ingest import process_uploads, load_master, worker_summary, account_summary
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MASTER_CSV = os.path.join(HERE, 'master_transactions.csv')
@@ -67,10 +67,18 @@ existing_rows, _ = load_master(MASTER_CSV)
 if not existing_rows:
     st.info("No data yet — upload a report above to get started.")
 else:
-    summary = worker_summary(existing_rows)
+    all_qty = sum(int(r['net_cancelled_qty']) for r in existing_rows)
+    all_val = sum(float(r['net_cancelled_value']) for r in existing_rows)
 
-    col1, col2 = st.columns([2, 1])
-    with col1:
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Total transactions", len(existing_rows))
+    m2.metric("Net units cancelled", f"{all_qty:,}")
+    m3.metric("Net $ cancelled", f"${all_val:,.2f}")
+
+    tab_user, tab_account = st.tabs(["By user", "By account"])
+
+    with tab_user:
+        summary = worker_summary(existing_rows)
         st.dataframe(
             summary.rename(columns={
                 'user': 'User', 'transactions_touched': 'Transactions touched',
@@ -86,12 +94,21 @@ else:
             "same timestamp -- almost certainly a system process, not a person. Worth confirming "
             "before folding them into human productivity numbers."
         )
-    with col2:
-        st.metric("Total transactions", len(existing_rows))
-        st.metric("Net units cancelled (all users)", f"{int(summary['net_units_cancelled'].sum()):,}")
-        st.metric("Net $ cancelled (all users)", f"${summary['net_value_cancelled'].sum():,.2f}")
+        st.bar_chart(summary.set_index('user')['net_value_cancelled'])
 
-    st.bar_chart(summary.set_index('user')['net_value_cancelled'])
+    with tab_account:
+        acct = account_summary(existing_rows)
+        st.dataframe(
+            acct.rename(columns={
+                'account_code': 'Account code', 'account_name': 'Account name',
+                'transactions_touched': 'Transactions touched',
+                'cancelling_transactions': 'Real cancellations',
+                'net_units_cancelled': 'Net units cancelled',
+                'net_value_cancelled': 'Net $ cancelled',
+            }),
+            use_container_width=True, hide_index=True,
+        )
+        st.bar_chart(acct.set_index('account_name')['net_value_cancelled'])
 
     with st.expander("Full transaction history"):
         st.dataframe(pd.DataFrame(existing_rows), use_container_width=True, hide_index=True)

@@ -84,7 +84,7 @@ def parse_records(lines: list[str]) -> list[dict]:
         l = lines[i]
         m_acct = ACCOUNT_RE.search(l)
         if m_acct:
-            account_code, account_name = m_acct.group(1), m_acct.group(2).strip()
+            account_code, account_name = m_acct.group(1), re.sub(r'\s+', ' ', m_acct.group(2)).strip()
             i += 1
             continue
 

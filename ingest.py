@@ -104,3 +104,26 @@ def worker_summary(rows: list[dict]) -> pd.DataFrame:
     ).reset_index()
     summary['likely_automated'] = summary['user'].isin(KNOWN_AUTOMATED_USERS)
     return summary.sort_values('net_value_cancelled', ascending=False).reset_index(drop=True)
+
+
+def account_summary(rows: list[dict]) -> pd.DataFrame:
+    """Same idea as worker_summary, grouped by account instead of user --
+    one row per account_code, with the account_name carried along for
+    display (a given account_code always maps to exactly one name, so
+    grouping on both together is safe and avoids a separate lookup)."""
+    if not rows:
+        return pd.DataFrame(columns=['account_code', 'account_name', 'transactions_touched',
+                                      'cancelling_transactions', 'net_units_cancelled', 'net_value_cancelled'])
+    df = pd.DataFrame(rows)
+    df['net_cancelled_qty'] = df['net_cancelled_qty'].astype(int)
+    df['net_cancelled_value'] = df['net_cancelled_value'].astype(float)
+
+    summary = df.groupby(['account_code', 'account_name']).apply(
+        lambda g: pd.Series({
+            'transactions_touched': len(g),
+            'cancelling_transactions': int((g['net_cancelled_qty'] > 0).sum()),
+            'net_units_cancelled': int(g['net_cancelled_qty'].sum()),
+            'net_value_cancelled': float(g['net_cancelled_value'].sum()),
+        }), include_groups=False
+    ).reset_index()
+    return summary.sort_values('net_value_cancelled', ascending=False).reset_index(drop=True)
